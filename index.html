@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>一元一次方程應用題挑戰賽</title>
+    <style>
+        /* 保留你原有的 CSS 樣式 */
+        body { font-family: 'PingFang TC', 'Microsoft JhengHei', sans-serif; background-color: #f0f4f8; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        .container { display: flex; flex-wrap: wrap; justify-content: center; gap: 20px; max-width: 1050px; width: 100%; }
+        .video-box { flex: 1.2; min-width: 350px; background: white; padding: 20px; border-radius: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .game-box { flex: 1; min-width: 350px; background: white; padding: 30px; border-radius: 25px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); text-align: center; }
+        .video-placeholder { position: relative; width: 100%; padding-bottom: 56.25%; background: #000; border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        .video-placeholder img { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.7; }
+        .play-btn { position: absolute; width: 70px; height: 70px; background: rgba(255,0,0,0.9); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 30px; box-shadow: 0 0 20px rgba(0,0,0,0.3); transition: 0.3s; z-index: 2; }
+        iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0; border-radius: 10px; }
+        #progress-bar { width: 100%; height: 12px; background: #e0e0e0; border-radius: 6px; margin-bottom: 20px; overflow: hidden; }
+        #progress-fill { width: 0%; height: 100%; background: #4caf50; transition: width 0.3s; }
+        /* 調整題目文字大小，適應較長的應用題 */
+        #equation { font-size: 22px; margin: 20px 0; color: #1a237e; font-weight: bold; min-height: 100px; text-align: left; line-height: 1.5; background: #f9f9f9; padding: 15px; border-radius: 10px; }
+        input[type="number"], .report-form input { font-size: 24px; width: 120px; text-align: center; padding: 10px; border: 2px solid #bbdefb; border-radius: 12px; outline: none; }
+        .report-form input { width: 85%; font-size: 16px; margin: 5px 0; }
+        button { padding: 12px 25px; border: none; border-radius: 12px; cursor: pointer; font-weight: bold; font-size: 18px; transition: 0.2s; margin: 5px; }
+        .btn-main { background: #3f51b5; color: white; width: 100%; margin-top: 20px; }
+        #msg { margin-top: 15px; font-size: 18px; font-weight: bold; min-height: 24px; }
+        h3 { color: #1a237e; margin-top: 0; }
+    </style>
+</head>
+<body>
+
+    <h1 style="color:#1a237e; margin-bottom: 20px;">一元一次方程式 應用題挑戰</h1>
+
+    <div class="container">
+        <div class="video-box">
+            <h3>📖 應用題解題步驟</h3>
+            <div class="video-placeholder" id="videoContainer" onclick="loadVideo()">
+                <img src="https://img.youtube.com/vi/DfV4cVHzJnE/maxresdefault.jpg" alt="影片縮圖">
+                <div class="play-btn">▶</div>
+            </div>
+            <p style="font-size: 15px; color: #444; margin-top: 15px; line-height: 1.6;">
+                💡 <b>解題技巧：</b><br>
+                1. <b>設未知數</b>：通常題目問什麼，就設什麼為 x。<br>
+                2. <b>找等量關係</b>：從題目中找出「等於」的關鍵字。<br>
+                3. <b>列式並求解</b>：將文字轉為數學式並解出 x。
+            </p>
+        </div>
+
+        <div class="game-box">
+            <div id="progress-bar"><div id="progress-fill"></div></div>
+            <div id="info-panel" style="display:flex; justify-content: space-between; margin-bottom: 10px;">
+                <span>題次: <span id="current-count">0</span>/10</span>
+                <span style="color:#2196f3;">⏱️: <span id="timer">0</span>s</span>
+                <span style="color:#e91e63;">分數: <span id="total-score">0</span></span>
+            </div>
+
+            <div id="difficulty-area">
+                <h3>🎮 開始練習應用題</h3>
+                <button style="background:#4caf50; color:white;" onclick="startGame(1)">🟢 基礎應用</button>
+                <button style="background:#ff9800; color:white;" onclick="startGame(2)">🟡 進階情境</button>
+            </div>
+
+            <div id="game-area" style="display:none;">
+                <div id="equation">題目讀取中...</div>
+                <div>答案：<input type="number" id="userAnswer" autocomplete="off" placeholder="?"></div>
+                <button class="btn-main" onclick="checkAnswer()">檢查答案</button>
+                <div id="msg"></div>
+            </div>
+        </div>
+    </div>
+
+<script>
+    let currentAnswer, score = 0, questionCount = 0, difficulty = 1;
+    let timerSeconds = 0, timerInterval, isWaiting = false, generatedVCode = 0;
+
+    // 應用題庫模板
+    const questionTemplates = {
+        1: [ // 難度一：簡單加減倍數
+            { q: "小明買了 {a} 個蘋果，每個 x 元，付了 100 元，找回 {b} 元。請問蘋果一個多少元？", calc: (a, b) => (100 - b) / a, range: {a: [2, 5], b: [10, 50]}, integer: true },
+            { q: "曉華今年 x 歲，爸爸的年齡是曉華的 {a} 倍多 {b} 歲。已知爸爸今年 {c} 歲，請算出曉華幾歲？", calc: (a, b, c) => (c - b) / a, range: {a: [3, 4], b: [1, 10], c: [30, 50]}, integer: true },
+            { q: "一條繩子長 {a} 公分，剪掉 x 公分後，剩下的長度剛好是剪掉長度的 {b} 倍。請問剪掉了多少公分？", calc: (a, b) => a / (b + 1), range: {a: [20, 100], b: [2, 4]}, integer: true }
+        ],
+        2: [ // 難度二：雙邊變數或複雜情境
+            { q: "某數的 {a} 倍加 {b}，等於該數的 {c} 倍減 {d}。請問該數是多少？", calc: (a, b, c, d) => (d + b) / (c - a), range: {a: [2, 4], b: [5, 20], c: [5, 8], d: [5, 20]}, integer: true },
+            { q: "老師將一袋糖果分給學生。若每人分 {a} 顆，則剩 {b} 顆；若每人分 {c} 顆，則不夠 {d} 顆。請問學生有多少人？", calc: (a, b, c, d) => (b + d) / (c - a), range: {a: [3, 5], b: [5, 15], c: [6, 8], d: [5, 15]}, integer: true }
+        ]
+    };
+
+    function loadVideo() {
+        const container = document.getElementById('videoContainer');
+        container.innerHTML = `<iframe src="https://www.youtube.com/embed/DfV4cVHzJnE?autoplay=1&rel=0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
+    }
+
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    function playSound(f) {
+        const o = audioCtx.createOscillator(); const g = audioCtx.createGain();
+        o.connect(g); g.connect(audioCtx.destination);
+        o.frequency.setValueAtTime(f, audioCtx.currentTime);
+        g.gain.setValueAtTime(0.05, audioCtx.currentTime);
+        o.start(); o.stop(audioCtx.currentTime + 0.15);
+    }
+
+    function startGame(lv) {
+        difficulty = lv; score = 0; questionCount = 0; timerSeconds = 0;
+        document.getElementById('difficulty-area').style.display = 'none';
+        document.getElementById('game-area').style.display = 'block';
+        timerInterval = setInterval(() => { timerSeconds++; document.getElementById('timer').innerText = timerSeconds; }, 1000);
+        nextQuestion();
+    }
+
+    function nextQuestion() {
+        if (questionCount >= 10) { clearInterval(timerInterval); endGame(); return; }
+        isWaiting = false; questionCount++;
+        document.getElementById('current-count').innerText = questionCount;
+        document.getElementById('progress-fill').style.width = (questionCount/10)*100 + "%";
+
+        // 隨機選取模板並生成整數解答的數字
+        let template = questionTemplates[difficulty][Math.floor(Math.random() * questionTemplates[difficulty].length)];
+        let vars = {}, ans = 0.5;
+        
+        // 迴圈直到算出整數答案
+        let attempts = 0;
+        while (!Number.isInteger(ans) && attempts < 100) {
+            for (let key in template.range) {
+                let r = template.range[key];
+                vars[key] = Math.floor(Math.random() * (r[1] - r[0] + 1)) + r[0];
+            }
+            ans = template.calc(...Object.values(vars));
+            attempts++;
+        }
+
+        let finalQ = template.q;
+        for (let key in vars) { finalQ = finalQ.replace(`{${key}}`, vars[key]); }
+
+        currentAnswer = ans;
+        document.getElementById('equation').innerText = finalQ;
+        document.getElementById('msg').innerText = "";
+        document.getElementById('userAnswer').value = "";
+        document.getElementById('userAnswer').focus();
+    }
+
+    function checkAnswer() {
+        if (isWaiting) return;
+        let val = parseInt(document.getElementById('userAnswer').value);
+        if (isNaN(val)) return;
+        isWaiting = true;
+        if (val === currentAnswer) { 
+            playSound(880); score += 10; 
+            document.getElementById('total-score').innerText = score; 
+            document.getElementById('msg').innerHTML = "<span style='color:green'>🌟 太棒了，列式正確！</span>"; 
+        } else { 
+            playSound(220); 
+            document.getElementById('msg').innerHTML = `<span style='color:red'>❌ 再想想看，答案是 ${currentAnswer}</span>`; 
+        }
+        setTimeout(nextQuestion, 2000); // 應用題讀題較慢，稍微延長停留時間
+    }
+
+    function endGame() {
+        const diffNames = {1: "基礎應用", 2: "進階情境"};
+        let endHTML = `<h3>練習結束</h3><p>難度：${diffNames[difficulty]}</p><p>得分：${score}</p><p>耗時：${timerSeconds} 秒</p>`;
+        if (score === 100) {
+            endHTML += `
+                <div class="report-form" style="border: 2px solid #2196f3; background: #e3f2fd; padding:15px; border-radius:15px;">
+                    <p style="color:#1a237e; font-weight:bold;">🏆 應用題達人！請登錄紀錄</p>
+                    <input type="text" id="stuClass" placeholder="班級">
+                    <input type="text" id="stuNo" placeholder="座號" oninput="updateVCode(this.value)">
+                    <input type="text" id="stuName" placeholder="學生姓名">
+                    <div id="vcode-area" style="margin:10px 0; padding:10px; background:white; border-radius:10px; font-weight:bold; color:red; font-size:24px;">🔑 驗證碼：--</div>
+                    <input type="text" id="inputVCode" placeholder="輸入上方紅字驗證碼">
+                    <button style="background:#2196f3; color:white; width:100%;" onclick="submitToGoogle()">確認送出成果</button>
+                </div>`;
+        } else { endHTML += `<button style="background:#4caf50; color:white;" onclick="location.reload()">重新挑戰</button>`; }
+        document.getElementById('game-area').innerHTML = endHTML;
+    }
+
+    function updateVCode(noVal) {
+        let no = parseInt(noVal);
+        if (!isNaN(no)) {
+            generatedVCode = (no * 3) * 100 + Math.floor(Math.random() * 90 + 10);
+            document.getElementById('vcode-area').innerText = `🔑 驗證碼：${generatedVCode}`;
+        }
+    }
+
+    function submitToGoogle() {
+        const sClass = document.getElementById('stuClass').value; const sNo = document.getElementById('stuNo').value;
+        const sName = document.getElementById('stuName').value; const sVCode = document.getElementById('inputVCode').value;
+        const diffNames = {1: "基礎應用", 2: "進階情境"}; const diffText = diffNames[difficulty];
+        const now = new Date(); const timeStr = `${now.getFullYear()}/${now.getMonth()+1}/${now.getDate()} ${now.getHours()}:${now.getMinutes()}:${now.getSeconds()}`;
+        if(!sClass || !sNo || !sName || !sVCode) { alert("請填寫完整喔！"); return; }
+        if(parseInt(sVCode) !== generatedVCode) { alert("驗證碼錯誤！"); return; }
+        const formID = "1FAIpQLScmocoi5Eh46SX5k7eZc4wOY0FQrnbg_-YRinQP43tzYACaLA";
+        const url = `https://docs.google.com/forms/d/e/${formID}/formResponse?entry.31624889=${encodeURIComponent(sClass)}&entry.291661577=${encodeURIComponent(sNo)}&entry.1976426889=${encodeURIComponent(sName)}&entry.1490605511=1&entry.1411146026=${timerSeconds}&entry.1027607786=${encodeURIComponent(timeStr)}&entry.2124156766=${sVCode}&entry.58311255=${encodeURIComponent(diffText)}&submit=Submit`;
+        window.open(url, '_blank'); alert("成果已送出！"); location.reload();
+    }
+</script>
+</body>
+</html>
